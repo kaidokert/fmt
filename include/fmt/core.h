@@ -205,6 +205,10 @@
 # include <functional>
 #endif
 
+#ifndef FMT_USE_WSTRING
+#define FMT_USE_WSTRING 1
+#endif
+
 FMT_BEGIN_NAMESPACE
 namespace internal {
 
@@ -325,7 +329,9 @@ class basic_string_view {
 };
 
 typedef basic_string_view<char> string_view;
+#if FMT_USE_WSTRING
 typedef basic_string_view<wchar_t> wstring_view;
+#endif
 
 template <typename Context>
 class basic_format_arg;
@@ -1225,10 +1231,12 @@ inline internal::named_arg<T, char> arg(string_view name, const T &arg) {
   return internal::named_arg<T, char>(name, arg);
 }
 
+#if FMT_USE_WSTRING
 template <typename T>
 inline internal::named_arg<T, wchar_t> arg(wstring_view name, const T &arg) {
   return internal::named_arg<T, wchar_t>(name, arg);
 }
+#endif
 
 // This function template is deleted intentionally to disable nested named
 // arguments as in ``format("{}", arg("a", arg("b", 42)))``.
@@ -1239,23 +1247,29 @@ void arg(S, internal::named_arg<T, Char>) FMT_DELETED;
 // color and (v)print_colored are deprecated.
 enum color { black, red, green, yellow, blue, magenta, cyan, white };
 FMT_API void vprint_colored(color c, string_view format, format_args args);
+#if FMT_USE_WSTRING
 FMT_API void vprint_colored(color c, wstring_view format, wformat_args args);
+#endif
 template <typename... Args>
 inline void print_colored(color c, string_view format_str,
                           const Args & ... args) {
   vprint_colored(c, format_str, make_format_args(args...));
 }
+#if FMT_USE_WSTRING
 template <typename... Args>
 inline void print_colored(color c, wstring_view format_str,
                           const Args & ... args) {
   vprint_colored(c, format_str, make_format_args<wformat_context>(args...));
 }
 #endif
+#endif
 
 format_context::iterator vformat_to(
     internal::buffer &buf, string_view format_str, format_args args);
+#if FMT_USE_WSTRING
 wformat_context::iterator vformat_to(
     internal::wbuffer &buf, wstring_view format_str, wformat_args args);
+#endif
 
 template <typename Container>
 struct is_contiguous : std::false_type {};
@@ -1278,6 +1292,7 @@ typename std::enable_if<
   return std::back_inserter(container);
 }
 
+#if FMT_USE_WSTRING
 template <typename Container>
 typename std::enable_if<
   is_contiguous<Container>::value, std::back_insert_iterator<Container>>::type
@@ -1288,9 +1303,12 @@ typename std::enable_if<
   vformat_to(buf, format_str, args);
   return std::back_inserter(container);
 }
+#endif
 
 std::string vformat(string_view format_str, format_args args);
+#if FMT_USE_WSTRING
 std::wstring vformat(wstring_view format_str, wformat_args args);
+#endif
 
 /**
   \rst
@@ -1310,14 +1328,18 @@ inline std::string format(string_view format_str, const Args & ... args) {
   format_arg_store<format_context, Args...> as{args...};
   return vformat(format_str, as);
 }
+#if FMT_USE_WSTRING
 template <typename... Args>
 inline std::wstring format(wstring_view format_str, const Args & ... args) {
   format_arg_store<wformat_context, Args...> as{args...};
   return vformat(format_str, as);
 }
+#endif
 
 FMT_API void vprint(std::FILE *f, string_view format_str, format_args args);
+#if FMT_USE_WSTRING
 FMT_API void vprint(std::FILE *f, wstring_view format_str, wformat_args args);
+#endif
 
 /**
   \rst
@@ -1337,14 +1359,18 @@ inline void print(std::FILE *f, string_view format_str, const Args & ... args) {
   Prints formatted data to the file *f* which should be in wide-oriented mode set
   via ``fwide(f, 1)`` or ``_setmode(_fileno(f), _O_U8TEXT)`` on Windows.
  */
+#if FMT_USE_WSTRING
 template <typename... Args>
 inline void print(std::FILE *f, wstring_view format_str, const Args & ... args) {
   format_arg_store<wformat_context, Args...> as(args...);
   vprint(f, format_str, as);
 }
+#endif
 
 FMT_API void vprint(string_view format_str, format_args args);
+#if FMT_USE_WSTRING
 FMT_API void vprint(wstring_view format_str, wformat_args args);
+#endif
 
 /**
   \rst
@@ -1361,11 +1387,13 @@ inline void print(string_view format_str, const Args & ... args) {
   vprint(format_str, as);
 }
 
+#if FMT_USE_WSTRING
 template <typename... Args>
 inline void print(wstring_view format_str, const Args & ... args) {
   format_arg_store<wformat_context, Args...> as(args...);
   vprint(format_str, as);
 }
+#endif
 FMT_END_NAMESPACE
 
 #endif  // FMT_CORE_H_

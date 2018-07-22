@@ -1147,6 +1147,7 @@ inline It format_uint(It out, UInt value, unsigned num_digits,
 #if FMT_USE_WINDOWS_H
 // A converter from UTF-8 to UTF-16.
 // It is only provided for Windows since other systems support UTF-8 natively.
+#if FMT_USE_WSTRING
 class utf8_to_utf16 {
  private:
   wmemory_buffer buffer_;
@@ -1178,6 +1179,7 @@ class utf16_to_utf8 {
   // in case of memory allocation error.
   FMT_API int convert(wstring_view s);
 };
+#endif
 
 FMT_API void format_windows_error(fmt::internal::buffer &out, int error_code,
                                   fmt::string_view message) FMT_NOEXCEPT;
@@ -2775,11 +2777,13 @@ class basic_writer {
     it = std::copy(value.begin(), value.end(), it);
   }
 
+#if FMT_USE_WSTRING
   void write(wstring_view value) {
     internal::require_wchar<char_type>();
     auto &&it = reserve(value.size());
     it = std::uninitialized_copy(value.begin(), value.end(), it);
   }
+#endif
 
   template <typename... FormatSpecs>
   void write(basic_string_view<char_type> str, FormatSpecs... specs) {
@@ -3435,10 +3439,12 @@ arg_join<It, char> join(It begin, It end, string_view sep) {
   return arg_join<It, char>(begin, end, sep);
 }
 
+#if FMT_USE_WSTRING
 template <typename It>
 arg_join<It, wchar_t> join(It begin, It end, wstring_view sep) {
   return arg_join<It, wchar_t>(begin, end, sep);
 }
+#endif
 
 // The following causes ICE in gcc 4.4.
 #if FMT_USE_TRAILING_RETURN && (!FMT_GCC_VERSION || FMT_GCC_VERSION >= 405)
@@ -3448,11 +3454,14 @@ auto join(const Range &range, string_view sep)
   return join(internal::begin(range), internal::end(range), sep);
 }
 
+#if FMT_USE_WSTRING
 template <typename Range>
 auto join(const Range &range, wstring_view sep)
     -> arg_join<decltype(internal::begin(range)), wchar_t> {
   return join(internal::begin(range), internal::end(range), sep);
 }
+#endif
+
 #endif
 
 /**
@@ -3478,6 +3487,7 @@ std::string to_string(const T &value) {
 /**
   Converts *value* to ``std::wstring`` using the default format for type *T*.
  */
+#if FMT_USE_WSTRING
 template <typename T>
 std::wstring to_wstring(const T &value) {
   std::wstring str;
@@ -3485,6 +3495,7 @@ std::wstring to_wstring(const T &value) {
   wwriter(buf).write(value);
   return str;
 }
+#endif
 
 template <typename Char, std::size_t SIZE>
 std::basic_string<Char> to_string(const basic_memory_buffer<Char, SIZE> &buf) {
@@ -3497,11 +3508,13 @@ inline format_context::iterator vformat_to(
   return vformat_to<arg_formatter<range>>(buf, format_str, args);
 }
 
+#if FMT_USE_WSTRING
 inline wformat_context::iterator vformat_to(
     internal::wbuffer &buf, wstring_view format_str, wformat_args args) {
   typedef back_insert_range<internal::wbuffer> range;
   return vformat_to<arg_formatter<range>>(buf, format_str, args);
 }
+#endif
 
 template <typename... Args, std::size_t SIZE = inline_buffer_size>
 inline format_context::iterator format_to(
@@ -3510,12 +3523,14 @@ inline format_context::iterator format_to(
   return vformat_to(buf, format_str, make_format_args(args...));
 }
 
+#if FMT_USE_WSTRING
 template <typename... Args, std::size_t SIZE = inline_buffer_size>
 inline wformat_context::iterator format_to(
     basic_memory_buffer<wchar_t, SIZE> &buf, wstring_view format_str,
     const Args & ... args) {
   return vformat_to(buf, format_str, make_format_args<wformat_context>(args...));
 }
+#endif
 
 template <typename OutputIt, typename Char = char>
 //using format_context_t = basic_format_context<OutputIt, Char>;
@@ -3534,6 +3549,7 @@ inline OutputIt vformat_to(OutputIt out, string_view format_str,
   typedef output_range<OutputIt, char> range;
   return vformat_to<arg_formatter<range>>(range(out), format_str, args);
 }
+#if FMT_USE_WSTRING
 template <typename OutputIt, typename... Args>
 inline OutputIt vformat_to(
     OutputIt out, wstring_view format_str,
@@ -3541,6 +3557,7 @@ inline OutputIt vformat_to(
   typedef output_range<OutputIt, wchar_t> range;
   return vformat_to<arg_formatter<range>>(range(out), format_str, args);
 }
+#endif
 
 /**
  \rst
@@ -3568,6 +3585,7 @@ inline typename std::enable_if<
   return vformat_to(out, format_str, make_format_args<format_context>(args...));
 }
 
+#if FMT_USE_WSTRING
 template <typename Container, typename... Args>
 inline typename std::enable_if<
   is_contiguous<Container>::value, std::back_insert_iterator<Container>>::type
@@ -3575,6 +3593,7 @@ inline typename std::enable_if<
               wstring_view format_str, const Args & ... args) {
   return vformat_to(out, format_str, make_format_args<wformat_context>(args...));
 }
+#endif
 
 template <typename OutputIt>
 struct format_to_n_result {
@@ -3619,6 +3638,7 @@ inline format_to_n_result<OutputIt> format_to_n(
   return vformat_to_n<OutputIt>(
     out, n, format_str, make_format_to_n_args<OutputIt>(args...));
 }
+#if FMT_USE_WSTRING
 template <typename OutputIt, typename... Args>
 inline format_to_n_result<OutputIt> format_to_n(
     OutputIt out, std::size_t n, wstring_view format_str, const Args &... args) {
@@ -3627,6 +3647,7 @@ inline format_to_n_result<OutputIt> format_to_n(
       make_format_args<typename format_context_t<It, wchar_t>::type>(args...));
   return {it.base(), it.count()};
 }
+#endif
 
 inline std::string vformat(string_view format_str, format_args args) {
   memory_buffer buffer;
@@ -3634,11 +3655,13 @@ inline std::string vformat(string_view format_str, format_args args) {
   return fmt::to_string(buffer);
 }
 
+#if FMT_USE_WSTRING
 inline std::wstring vformat(wstring_view format_str, wformat_args args) {
   wmemory_buffer buffer;
   vformat_to(buffer, format_str, args);
   return to_string(buffer);
 }
+#endif
 
 template <typename String, typename... Args>
 inline typename std::enable_if<
