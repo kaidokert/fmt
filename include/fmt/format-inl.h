@@ -363,6 +363,7 @@ FMT_FUNC internal::utf8_to_utf16::utf8_to_utf16(string_view s) {
   buffer_[length] = 0;
 }
 
+#if FMT_USE_WSTRING
 FMT_FUNC internal::utf16_to_utf8::utf16_to_utf8(wstring_view s) {
   if (int error_code = convert(s)) {
     FMT_THROW(windows_error(error_code,
@@ -393,6 +394,7 @@ FMT_FUNC int internal::utf16_to_utf8::convert(wstring_view s) {
   buffer_[length] = 0;
   return 0;
 }
+#endif
 
 FMT_FUNC void windows_error::init(
     int err_code, string_view format_str, format_args args) {
@@ -485,19 +487,23 @@ FMT_FUNC void vprint(std::FILE *f, string_view format_str, format_args args) {
   std::fwrite(buffer.data(), 1, buffer.size(), f);
 }
 
+#if FMT_USE_WSTRING
 FMT_FUNC void vprint(std::FILE *f, wstring_view format_str, wformat_args args) {
   wmemory_buffer buffer;
   vformat_to(buffer, format_str, args);
   std::fwrite(buffer.data(), sizeof(wchar_t), buffer.size(), f);
 }
+#endif
 
 FMT_FUNC void vprint(string_view format_str, format_args args) {
   vprint(stdout, format_str, args);
 }
 
+#if FMT_USE_WSTRING
 FMT_FUNC void vprint(wstring_view format_str, wformat_args args) {
   vprint(stdout, format_str, args);
 }
+#endif
 
 #ifndef FMT_EXTENDED_COLORS
 FMT_FUNC void vprint_colored(color c, string_view format, format_args args) {
@@ -508,6 +514,7 @@ FMT_FUNC void vprint_colored(color c, string_view format, format_args args) {
   std::fputs(internal::data::RESET_COLOR, stdout);
 }
 
+#if FMT_USE_WSTRING
 FMT_FUNC void vprint_colored(color c, wstring_view format, wformat_args args) {
   wchar_t escape[] = L"\x1b[30m";
   escape[3] = static_cast<wchar_t>('0' + c);
@@ -515,6 +522,7 @@ FMT_FUNC void vprint_colored(color c, wstring_view format, wformat_args args) {
   vprint(format, args);
   std::fputws(internal::data::WRESET_COLOR, stdout);
 }
+#endif
 #else
 namespace internal {
 FMT_CONSTEXPR void to_esc(uint8_t c, char out[], int offset) {
